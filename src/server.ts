@@ -13,7 +13,7 @@ import connectDatabase from './config/database';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import requestRoutes from './routes/request.routes';
-import adminRoutes from './routes/admin.routes'; // NEW
+import adminRoutes from './routes/admin.routes';
 
 // Import middleware
 import { errorHandler, notFound } from './middleware/errorHandler';
@@ -72,7 +72,6 @@ app.use(
   })
 );
 
-
 // Body parser middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -96,7 +95,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/requests', requestRoutes);
-app.use('/api/admin', adminRoutes); 
+app.use('/api/admin', adminRoutes);
 
 // 404 handler
 app.use(notFound);
@@ -104,20 +103,26 @@ app.use(notFound);
 // Error handler (must be last)
 app.use(errorHandler);
 
-// Start server
-const PORT = process.env.PORT || 5000;
+// Only start server if not in Vercel (serverless) environment
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV}`);
-  console.log(`API URL: http://localhost:${PORT}`);
-  console.log(`Admin endpoints: http://localhost:${PORT}/api/admin`);
-});
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV}`);
+    console.log(`API URL: http://localhost:${PORT}`);
+    console.log(`Admin endpoints: http://localhost:${PORT}/api/admin`);
+  });
+}
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err: Error) => {
   console.error('Unhandled Rejection:', err);
-  process.exit(1);
+  // Don't exit in serverless environment
+  if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+    process.exit(1);
+  }
 });
 
+// Export the app for Vercel
 export default app;
