@@ -11,9 +11,6 @@ router.use(requireAuth);
 // Update current user's profile
 router.patch('/profile', updateUserProfile);
 
-// Get all users
-router.get('/', getAllUsers);
-
 // Get user's websites
 router.get('/websites', getUserWebsites);
 

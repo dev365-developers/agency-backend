@@ -25,11 +25,79 @@ import {
   getWebsiteStats,
 } from '../controllers/admin.website.controller';
 
+// User controllers
+import {
+  getAllUsers,
+  getUserDetails,
+  updateUser,
+  getUserRequests,
+  getUserWebsites,
+  deleteUser,
+  getUserStats,
+} from '../controllers/admin.user.controller';
+
 const router = express.Router();
 
 // Apply admin authentication to all routes
 router.use(requireAdmin);
 router.use(logAdminAction);
+
+// ============================================
+// USER ROUTES
+// ============================================
+
+/**
+ * @route   GET /api/admin/users/stats
+ * @desc    Get user statistics
+ * @access  Private (Admin)
+ */
+router.get('/users/stats', getUserStats);
+
+/**
+ * @route   GET /api/admin/users
+ * @desc    Get all users with filtering/pagination
+ * @access  Private (Admin)
+ * @query   search, authProvider, page, limit, sortBy, order
+ */
+router.get('/users', getAllUsers);
+
+/**
+ * @route   GET /api/admin/users/:id
+ * @desc    Get single user with full details
+ * @access  Private (Admin)
+ */
+router.get('/users/:id', getUserDetails);
+
+/**
+ * @route   PATCH /api/admin/users/:id
+ * @desc    Update user information
+ * @access  Private (Admin)
+ * @body    { email?, firstName?, lastName?, imageUrl? }
+ */
+router.patch('/users/:id', updateUser);
+
+/**
+ * @route   DELETE /api/admin/users/:id
+ * @desc    Delete user
+ * @access  Private (Admin)
+ */
+router.delete('/users/:id', deleteUser);
+
+/**
+ * @route   GET /api/admin/users/:id/requests
+ * @desc    Get all requests for a specific user
+ * @access  Private (Admin)
+ * @query   status, projectType, page, limit
+ */
+router.get('/users/:id/requests', getUserRequests);
+
+/**
+ * @route   GET /api/admin/users/:id/websites
+ * @desc    Get all websites for a specific user
+ * @access  Private (Admin)
+ * @query   status, page, limit
+ */
+router.get('/users/:id/websites', getUserWebsites);
 
 // ============================================
 // REQUEST ROUTES

@@ -63,7 +63,7 @@ export interface UpdateWebsiteRequestDTO {
   selectedPlan?: string;
 }
 
-// Admin DTOs
+// Admin DTOs - Request Management
 export interface UpdateRequestStatusDTO {
   status: 'PENDING' | 'IN_REVIEW' | 'CONTACTED' | 'APPROVED' | 'REJECTED';
   internalNotes?: string;
@@ -78,6 +78,7 @@ export interface RejectRequestDTO {
   reason: string;
 }
 
+// Admin DTOs - Website Management
 export interface UpdateWebsiteDTO {
   name?: string;
   description?: string;
@@ -114,4 +115,31 @@ export interface UpdateMilestoneDTO {
 
 export interface AssignAdminDTO {
   assignedAdmin: string;
+}
+
+// Admin DTOs - User Management
+export interface UpdateUserDTO {
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  imageUrl?: string;
+}
+
+export interface UserWithStats {
+  _id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  imageUrl?: string;
+  authProvider: 'clerk' | 'google' | 'email';
+  createdAt: Date;
+  updatedAt: Date;
+  requestCount: number;
+  websiteCount: number;
+}
+
+export interface UserDetailsResponse {
+  user: UserWithStats;
+  recentRequests: any[];
+  recentWebsites: any[];
 }
