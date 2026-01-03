@@ -20,7 +20,7 @@ import adminRoutes from './routes/admin.routes';
 import { errorHandler, notFound } from './middleware/errorHandler';
 
 // 🔥 Import billing cron job
-import { startBillingCron, startHourlyBillingCheck } from './jobs/BillingCron';
+import { startBillingCron, startHourlyBillingCheck } from './jobs/billingCron';
 
 // Load environment variables
 dotenv.config();
