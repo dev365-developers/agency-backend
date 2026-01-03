@@ -374,7 +374,7 @@ export const sendRequestNotificationEmail = async (
                 </div>
                 
                 <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">
-                  If you have any questions in the meantime, feel free to reply to this email.
+                  Please do not reply to this mail since it is an automated response.
                 </p>
                 
                 <p style="margin-top: 20px; font-size: 14px; color: #374151;">
@@ -620,7 +620,7 @@ export const sendClientApprovalEmail = async (
           <div class="email-wrapper">
             <div class="email-container">
               <div class="header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                <h1>🎉 Request Approved!</h1>
+                <h1>Request Approved!</h1>
                 <p>Your project is now in progress</p>
               </div>
               
@@ -680,7 +680,7 @@ export const sendClientApprovalEmail = async (
                 </div>
                 
                 <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">
-                  If you have any questions, feel free to reply to this email or contact us at ${request.contactPhone}.
+                  Please do not reply to this mail since it is an automated response.
                 </p>
                 
                 <p style="margin-top: 20px; font-size: 14px; color: #374151;">
@@ -733,7 +733,7 @@ export const sendBillingActivatedEmail = async (
           <div class="email-wrapper">
             <div class="email-container">
               <div class="header" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);">
-                <h1>🎉 Your Website is Live!</h1>
+                <h1>Your Website is Live!</h1>
                 <p>Congratulations! Your project is now deployed</p>
               </div>
               
@@ -795,7 +795,7 @@ export const sendBillingActivatedEmail = async (
                 <div class="info-box">
                   <strong>📞 How to Make Payment</strong>
                   <p>
-                    Please contact us at <strong>${request.contactPhone}</strong> or reply to this email 
+                    Please contact us at <strong>${process.env.CONTACT_NO}</strong>
                     to arrange payment. We accept various payment methods for your convenience.
                   </p>
                 </div>
@@ -853,7 +853,7 @@ export const sendBillingSuspensionEmail = async (
           <div class="email-wrapper">
             <div class="email-container">
               <div class="header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
-                <h1>⚠️ Website Suspended</h1>
+                <h1>Website Suspended</h1>
                 <p>Immediate action required</p>
               </div>
               
@@ -867,7 +867,7 @@ export const sendBillingSuspensionEmail = async (
                 </p>
 
                 <div class="alert-box" style="background-color: #fee2e2; border-left-color: #dc2626;">
-                  <strong style="color: #991b1b;">🚨 Website Status: SUSPENDED</strong>
+                  <strong style="color: #991b1b;">Website Status: SUSPENDED</strong>
                   <p style="color: #991b1b;">
                     Your website is currently inaccessible to visitors. To restore service, 
                     payment must be received immediately.
@@ -905,7 +905,7 @@ export const sendBillingSuspensionEmail = async (
                 <div class="info-box">
                   <strong>💳 How to Restore Your Website</strong>
                   <p>
-                    1. Contact us immediately at <strong>${request.contactPhone}</strong><br/>
+                    1. Contact us immediately at <strong>${process.env.CONTACT_NO}</strong><br/>
                     2. Arrange payment for the outstanding amount<br/>
                     3. Your website will be restored within 2-4 hours of payment confirmation
                   </p>
@@ -972,7 +972,7 @@ export const sendBillingOverdueEmail = async (
           <div class="email-wrapper">
             <div class="email-container">
               <div class="header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
-                <h1>⚠️ Payment Overdue</h1>
+                <h1>Payment Overdue</h1>
                 <p>Please settle your account</p>
               </div>
               
@@ -987,7 +987,7 @@ export const sendBillingOverdueEmail = async (
                 </p>
 
                 <div class="alert-box">
-                  <strong>📅 Payment Status: OVERDUE</strong>
+                  <strong>Payment Status: OVERDUE</strong>
                   <p>
                     Your payment was due on ${website.billing.dueAt?.toLocaleDateString()}. 
                     To maintain uninterrupted service, please make payment immediately.
@@ -1026,7 +1026,7 @@ export const sendBillingOverdueEmail = async (
                 <div class="info-box">
                   <strong>💳 Make Payment Now</strong>
                   <p>
-                    Contact us at <strong>${request.contactPhone}</strong> or reply to this email 
+                    Contact us at <strong>${process.env.CONTACT_NO}</strong> or reply to this email 
                     to arrange payment and keep your website active.
                   </p>
                 </div>
@@ -1075,7 +1075,7 @@ export const sendSupportRequestAdminEmail = async (
     await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
       to: adminEmail,
-      subject: `🆘 New Support Request: ${supportRequest.category}`,
+      subject: `New Support Request: ${supportRequest.category}`,
       html: `
         <!DOCTYPE html>
         <html lang="en">
@@ -1104,7 +1104,7 @@ export const sendSupportRequestAdminEmail = async (
           <div class="email-wrapper">
             <div class="email-container">
               <div class="header admin-header">
-                <h1>🆘 New Support Request</h1>
+                <h1>New Support Request</h1>
                 <p>Immediate attention required</p>
               </div>
               
@@ -1292,7 +1292,7 @@ export const sendSupportRequestUserEmail = async (
                   <strong>What Happens Next?</strong>
                   <p>
                     Our support team will review your request and get back to you within 24-48 hours. 
-                    For urgent matters, please call us at <strong>${websiteRequest.contactPhone}</strong>.
+                    For urgent matters, please call us at <strong>${process.env.CONTACT_NO}</strong>.
                   </p>
                 </div>
 
@@ -1358,7 +1358,7 @@ export const sendSupportResolvedEmail = async (
           <div class="email-wrapper">
             <div class="email-container">
               <div class="header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                <h1>✅ Issue Resolved</h1>
+                <h1>Issue Resolved</h1>
                 <p>Your support request has been completed</p>
               </div>
               
@@ -1396,7 +1396,7 @@ export const sendSupportResolvedEmail = async (
                 </div>
 
                 <div class="info-box">
-                  <strong>📋 Original Request</strong>
+                  <strong>Original Request</strong>
                   <p style="margin-top: 8px; color: #4b5563;">${supportRequest.message}</p>
                 </div>
 
@@ -1416,7 +1416,7 @@ export const sendSupportResolvedEmail = async (
                     If you're still experiencing issues or have additional questions, feel free to:
                     <br/>• Reply to this email
                     <br/>• Submit a new support request through your dashboard
-                    <br/>• Call us at <strong>${websiteRequest.contactPhone}</strong>
+                    <br/>• Call us at <strong>${process.env.CONTACT_NO}</strong>
                   </p>
                 </div>
                 
