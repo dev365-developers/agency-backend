@@ -1,7 +1,9 @@
 // controllers/admin.website.controller.ts
 import { Request, Response } from 'express';
-import Website, { WebsiteStatus } from '../models/Website';
+import Website, { WebsiteStatus, BillingStatus } from '../models/Website';
 import WebsiteRequest from '../models/WebsiteRequest';
+import { initializeBilling } from '../utils/billingUtils';
+import { sendBillingActivatedEmail } from '../utils/emailService';
 
 /**
  * @desc    Get all websites
@@ -15,6 +17,7 @@ export const getAllWebsites = async (
   try {
     const { 
       status, 
+      billingStatus,
       assignedAdmin, 
       search, 
       page = 1, 
@@ -28,6 +31,10 @@ export const getAllWebsites = async (
     
     if (status) {
       query.status = status;
+    }
+    
+    if (billingStatus) {
+      query['billing.status'] = billingStatus;
     }
     
     if (assignedAdmin) {
@@ -149,9 +156,19 @@ export const updateWebsite = async (
       }
     });
     
+    // Get current website to check status change
+    const currentWebsite = await Website.findById(id);
+    if (!currentWebsite) {
+      res.status(404).json({
+        success: false,
+        error: 'Website not found',
+      });
+      return;
+    }
+
     // Handle status change timestamps
     if (filteredData.status) {
-      if (filteredData.status === WebsiteStatus.IN_PROGRESS && !filteredData.startedAt) {
+      if (filteredData.status === WebsiteStatus.IN_PROGRESS && !currentWebsite.startedAt) {
         filteredData.startedAt = new Date();
       }
       if (filteredData.status === WebsiteStatus.COMPLETED) {
@@ -159,6 +176,31 @@ export const updateWebsite = async (
       }
       if (filteredData.status === WebsiteStatus.DEPLOYED) {
         filteredData.deployedAt = new Date();
+        
+        // 🔥 PHASE 2: Initialize billing when deployed
+        if (currentWebsite.status !== WebsiteStatus.DEPLOYED) {
+          // Convert plan to lowercase if provided
+          const billingPlan = updateData.billingPlan 
+            ? updateData.billingPlan.toLowerCase().trim() 
+            : undefined;
+          
+          const billingData = initializeBilling(
+            billingPlan,
+            updateData.billingPrice,
+            updateData.billingCycle || 'monthly'
+          );
+          
+          // Update billing fields individually
+          filteredData['billing.status'] = billingData.status;
+          filteredData['billing.plan'] = billingData.plan;
+          filteredData['billing.price'] = billingData.price;
+          filteredData['billing.billingCycle'] = billingData.billingCycle;
+          filteredData['billing.activatedAt'] = billingData.activatedAt;
+          filteredData['billing.dueAt'] = billingData.dueAt;
+          filteredData['billing.graceEndsAt'] = billingData.graceEndsAt;
+          
+          console.log(`✅ Billing initialized for website ${id}:`, billingData);
+        }
       }
     }
     
@@ -174,6 +216,20 @@ export const updateWebsite = async (
         error: 'Website not found',
       });
       return;
+    }
+
+    // Send billing activation email if status changed to DEPLOYED
+    if (filteredData.status === WebsiteStatus.DEPLOYED && 
+        currentWebsite.status !== WebsiteStatus.DEPLOYED) {
+      try {
+        const request = await WebsiteRequest.findById(website.requestId);
+        if (request) {
+          await sendBillingActivatedEmail(request, website);
+        }
+      } catch (emailError) {
+        console.error('Failed to send billing activation email:', emailError);
+        // Don't fail the request if email fails
+      }
     }
     
     res.status(200).json({
@@ -231,6 +287,8 @@ export const updateWebsiteStatus = async (
       return;
     }
     
+    const previousStatus = website.status;
+    
     // Update status
     website.status = status;
     
@@ -243,6 +301,22 @@ export const updateWebsiteStatus = async (
     }
     if (status === WebsiteStatus.DEPLOYED) {
       website.deployedAt = new Date();
+      
+      // 🔥 PHASE 2: Initialize billing when deployed
+      if (previousStatus !== WebsiteStatus.DEPLOYED) {
+        const billingData = initializeBilling();
+        
+        // Update billing fields
+        website.billing.status = billingData.status!;
+        website.billing.plan = billingData.plan;
+        website.billing.price = billingData.price;
+        website.billing.billingCycle = billingData.billingCycle!;
+        website.billing.activatedAt = billingData.activatedAt;
+        website.billing.dueAt = billingData.dueAt;
+        website.billing.graceEndsAt = billingData.graceEndsAt;
+        
+        console.log(`✅ Billing initialized for website ${id}:`, billingData);
+      }
     }
     
     // Add notes if provided
@@ -253,6 +327,18 @@ export const updateWebsiteStatus = async (
     }
     
     await website.save();
+
+    // Send billing activation email if status changed to DEPLOYED
+    if (status === WebsiteStatus.DEPLOYED && previousStatus !== WebsiteStatus.DEPLOYED) {
+      try {
+        const request = await WebsiteRequest.findById(website.requestId);
+        if (request) {
+          await sendBillingActivatedEmail(request, website);
+        }
+      } catch (emailError) {
+        console.error('Failed to send billing activation email:', emailError);
+      }
+    }
     
     res.status(200).json({
       success: true,
@@ -264,6 +350,126 @@ export const updateWebsiteStatus = async (
     res.status(500).json({
       success: false,
       error: 'Failed to update website status',
+    });
+  }
+};
+
+/**
+ * @desc    Update billing information
+ * @route   PATCH /api/admin/websites/:id/billing
+ * @access  Private (Admin)
+ */
+export const updateBilling = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { plan, price, billingCycle, status } = req.body;
+    
+    const website = await Website.findById(id);
+    
+    if (!website) {
+      res.status(404).json({
+        success: false,
+        error: 'Website not found',
+      });
+      return;
+    }
+    
+    // Update billing fields with lowercase conversion for plan
+    if (plan !== undefined) {
+      website.billing.plan = typeof plan === 'string' 
+        ? plan.toLowerCase().trim() 
+        : plan;
+    }
+    if (price !== undefined) website.billing.price = price;
+    if (billingCycle !== undefined) website.billing.billingCycle = billingCycle;
+    if (status !== undefined && Object.values(BillingStatus).includes(status)) {
+      website.billing.status = status;
+    }
+    
+    await website.save();
+    
+    res.status(200).json({
+      success: true,
+      message: 'Billing updated successfully',
+      data: website,
+    });
+  } catch (error) {
+    console.error('Error updating billing:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update billing',
+    });
+  }
+};
+
+/**
+ * @desc    Record payment for website
+ * @route   POST /api/admin/websites/:id/payment
+ * @access  Private (Admin)
+ */
+export const recordPayment = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { amount, method, transactionId } = req.body;
+    
+    if (!amount || amount <= 0) {
+      res.status(400).json({
+        success: false,
+        error: 'Valid payment amount is required',
+      });
+      return;
+    }
+    
+    const website = await Website.findById(id);
+    
+    if (!website) {
+      res.status(404).json({
+        success: false,
+        error: 'Website not found',
+      });
+      return;
+    }
+    
+    const now = new Date();
+    
+    // Add payment to history
+    if (!website.billing.paymentHistory) {
+      website.billing.paymentHistory = [];
+    }
+    
+    website.billing.paymentHistory.push({
+      amount,
+      date: now,
+      method,
+      transactionId,
+    });
+    
+    // Update billing status to ACTIVE
+    website.billing.status = BillingStatus.ACTIVE;
+    website.billing.lastPaymentAt = now;
+    
+    // Calculate next due date
+    const { calculateNextDueDate } = require('../utils/billingUtils');
+    website.billing.dueAt = calculateNextDueDate(now, website.billing.billingCycle);
+    
+    await website.save();
+    
+    res.status(200).json({
+      success: true,
+      message: 'Payment recorded successfully',
+      data: website,
+    });
+  } catch (error) {
+    console.error('Error recording payment:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to record payment',
     });
   }
 };
@@ -443,11 +649,19 @@ export const getWebsiteStats = async (
   res: Response
 ): Promise<void> => {
   try {
-    const [statusStats, adminStats, total] = await Promise.all([
+    const [statusStats, billingStats, adminStats, total] = await Promise.all([
       Website.aggregate([
         {
           $group: {
             _id: '$status',
+            count: { $sum: 1 },
+          },
+        },
+      ]),
+      Website.aggregate([
+        {
+          $group: {
+            _id: '$billing.status',
             count: { $sum: 1 },
           },
         },
@@ -474,12 +688,19 @@ export const getWebsiteStats = async (
       acc[status] = stat ? stat.count : 0;
       return acc;
     }, {} as Record<string, number>);
+
+    const formattedBillingStats = Object.values(BillingStatus).reduce((acc, status) => {
+      const stat = billingStats.find(s => s._id === status);
+      acc[status] = stat ? stat.count : 0;
+      return acc;
+    }, {} as Record<string, number>);
     
     res.status(200).json({
       success: true,
       data: {
         total,
         byStatus: formattedStatusStats,
+        byBillingStatus: formattedBillingStats,
         byAdmin: adminStats,
       },
     });

@@ -115,6 +115,48 @@ export const getUserWebsites = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const getUserWebsitesByPlan = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.auth?.userId;
+    const { plan } = req.query;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required',
+      });
+    }
+
+    if (!plan || typeof plan !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'Plan query parameter is required',
+      });
+    }
+
+    const websites = await Website.find({ 
+      userId,
+      'billing.plan': plan.toLowerCase()
+    })
+      .sort({ createdAt: -1 })
+      .select('-__v -adminNotes -repositoryUrl -milestones')
+      .lean();
+
+    res.json({
+      success: true,
+      count: websites.length,
+      plan: plan.toLowerCase(),
+      data: websites,
+    });
+  } catch (error: any) {
+    console.error('Get user websites by plan error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch websites by plan',
+    });
+  }
+};
+
 export const getUserWebsiteById = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.auth?.userId;

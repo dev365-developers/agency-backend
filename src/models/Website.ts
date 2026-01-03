@@ -10,6 +10,31 @@ export enum WebsiteStatus {
   CANCELLED = 'CANCELLED',
 }
 
+export enum BillingStatus {
+  PENDING = 'PENDING',
+  ACTIVE = 'ACTIVE',
+  OVERDUE = 'OVERDUE',
+  SUSPENDED = 'SUSPENDED',
+}
+
+export interface IBilling {
+  status: BillingStatus;
+  plan?: string;
+  price?: number;
+  billingCycle: 'monthly' | 'quarterly' | 'yearly';
+  activatedAt?: Date;
+  dueAt?: Date;
+  lastPaymentAt?: Date;
+  graceEndsAt?: Date;
+  suspendedAt?: Date;
+  paymentHistory?: Array<{
+    amount: number;
+    date: Date;
+    method?: string;
+    transactionId?: string;
+  }>;
+}
+
 export interface IWebsite extends Document {
   userId: string;
   requestId: mongoose.Types.ObjectId;
@@ -44,6 +69,9 @@ export interface IWebsite extends Document {
     completedAt?: Date;
   }>;
   
+  // Billing information
+  billing: IBilling;
+  
   // Timestamps
   startedAt?: Date;
   completedAt?: Date;
@@ -52,6 +80,48 @@ export interface IWebsite extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
+
+const billingSchema = new Schema<IBilling>({
+  status: {
+    type: String,
+    enum: Object.values(BillingStatus),
+    default: BillingStatus.PENDING,
+    required: true,
+  },
+  plan: {
+    type: String,
+    trim: true,
+  },
+  price: {
+    type: Number,
+    min: 0,
+  },
+  billingCycle: {
+    type: String,
+    enum: ['monthly', 'quarterly', 'yearly'],
+    default: 'monthly',
+  },
+  activatedAt: Date,
+  dueAt: Date,
+  lastPaymentAt: Date,
+  graceEndsAt: Date,
+  suspendedAt: Date,
+  paymentHistory: [
+    {
+      amount: {
+        type: Number,
+        required: true,
+      },
+      date: {
+        type: Date,
+        required: true,
+        default: Date.now,
+      },
+      method: String,
+      transactionId: String,
+    },
+  ],
+}, { _id: false });
 
 const websiteSchema = new Schema<IWebsite>(
   {
@@ -143,6 +213,14 @@ const websiteSchema = new Schema<IWebsite>(
         completedAt: Date,
       },
     ],
+    billing: {
+      type: billingSchema,
+      required: true,
+      default: () => ({
+        status: BillingStatus.PENDING,
+        billingCycle: 'monthly',
+      }),
+    },
     startedAt: Date,
     completedAt: Date,
     deployedAt: Date,
@@ -156,6 +234,9 @@ const websiteSchema = new Schema<IWebsite>(
 websiteSchema.index({ userId: 1, status: 1 });
 websiteSchema.index({ assignedAdmin: 1 });
 websiteSchema.index({ status: 1, createdAt: -1 });
+websiteSchema.index({ 'billing.status': 1 });
+websiteSchema.index({ 'billing.dueAt': 1 });
+websiteSchema.index({ 'billing.graceEndsAt': 1 });
 
 // Update completion percentage before saving
 websiteSchema.pre('save', function(next) {

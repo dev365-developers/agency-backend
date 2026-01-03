@@ -19,6 +19,8 @@ import {
   getWebsiteDetails,
   updateWebsite,
   updateWebsiteStatus,
+  updateBilling,
+  recordPayment,
   addMilestone,
   updateMilestone,
   assignAdmin,
@@ -35,6 +37,16 @@ import {
   deleteUser,
   getUserStats,
 } from '../controllers/admin.user.controller';
+
+import {
+  getAllSupportRequests,
+  getSupportRequestDetails,
+  updateSupportRequestStatus,
+  updateSupportRequest,
+  assignAdminToSupport,
+  setSupportPriority,
+  getSupportStats,
+} from '../controllers/admin.support.controller';
 
 const router = express.Router();
 
@@ -163,7 +175,7 @@ router.post('/requests/:id/reject', rejectRequest);
 
 /**
  * @route   GET /api/admin/websites/stats
- * @desc    Get website statistics
+ * @desc    Get website statistics (including billing stats)
  * @access  Private (Admin)
  */
 router.get('/websites/stats', getWebsiteStats);
@@ -172,7 +184,7 @@ router.get('/websites/stats', getWebsiteStats);
  * @route   GET /api/admin/websites
  * @desc    Get all websites with filtering/pagination
  * @access  Private (Admin)
- * @query   status, assignedAdmin, search, page, limit, sortBy, order
+ * @query   status, billingStatus, assignedAdmin, search, page, limit, sortBy, order
  */
 router.get('/websites', getAllWebsites);
 
@@ -200,6 +212,22 @@ router.patch('/websites/:id', updateWebsite);
 router.patch('/websites/:id/status', updateWebsiteStatus);
 
 /**
+ * @route   PATCH /api/admin/websites/:id/billing
+ * @desc    Update billing information
+ * @access  Private (Admin)
+ * @body    { plan?, price?, billingCycle?, status? }
+ */
+router.patch('/websites/:id/billing', updateBilling);
+
+/**
+ * @route   POST /api/admin/websites/:id/payment
+ * @desc    Record a payment for website
+ * @access  Private (Admin)
+ * @body    { amount: number, method?: string, transactionId?: string }
+ */
+router.post('/websites/:id/payment', recordPayment);
+
+/**
  * @route   PATCH /api/admin/websites/:id/assign
  * @desc    Assign admin to website
  * @access  Private (Admin)
@@ -222,5 +250,71 @@ router.post('/websites/:id/milestones', addMilestone);
  * @body    { title?: string, completed?: boolean }
  */
 router.patch('/websites/:id/milestones/:milestoneIndex', updateMilestone);
+
+// ============================================
+// SUPPORT ROUTES
+// ============================================
+
+/**
+ * @route   GET /api/admin/support/stats
+ * @desc    Get support request statistics
+ * @access  Private (Admin)
+ */
+router.get('/support/stats', getSupportStats);
+
+/**
+ * @route   GET /api/admin/support
+ * @desc    Get all support requests with filtering/pagination
+ * @access  Private (Admin)
+ * @query   status, priority, category, assignedAdmin, search, page, limit, sortBy, order
+ */
+router.get('/support', getAllSupportRequests);
+
+/**
+ * @route   GET /api/admin/support/:id
+ * @desc    Get single support request with full details
+ * @access  Private (Admin)
+ */
+router.get('/support/:id', getSupportRequestDetails);
+
+/**
+ * @route   PATCH /api/admin/support/:id
+ * @desc    Update support request (bulk update)
+ * @access  Private (Admin)
+ * @body    { status?, priority?, assignedAdmin?, internalNotes? }
+ */
+router.patch('/support/:id', updateSupportRequest);
+
+/**
+ * @route   PATCH /api/admin/support/:id/status
+ * @desc    Update support request status
+ * @access  Private (Admin)
+ * @body    { status: SupportStatus, internalNotes?: string }
+ */
+router.patch('/support/:id/status', updateSupportRequestStatus);
+
+/**
+ * @route   PATCH /api/admin/support/:id/notes
+ * @desc    Add/update internal notes
+ * @access  Private (Admin)
+ * @body    { internalNotes: string }
+ */
+// router.patch('/support/:id/notes', addInternalNotes);
+
+/**
+ * @route   PATCH /api/admin/support/:id/assign
+ * @desc    Assign admin to support request
+ * @access  Private (Admin)
+ * @body    { assignedAdmin: string }
+ */
+router.patch('/support/:id/assign', assignAdminToSupport);
+
+/**
+ * @route   PATCH /api/admin/support/:id/priority
+ * @desc    Set priority for support request
+ * @access  Private (Admin)
+ * @body    { priority: "LOW" | "MEDIUM" | "HIGH" }
+ */
+router.patch('/support/:id/priority', setSupportPriority);
 
 export default router;

@@ -13,10 +13,14 @@ import connectDatabase from './config/database';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import requestRoutes from './routes/request.routes';
+import supportRoutes from './routes/support.routes';
 import adminRoutes from './routes/admin.routes';
 
 // Import middleware
 import { errorHandler, notFound } from './middleware/errorHandler';
+
+// 🔥 Import billing cron job
+import { startBillingCron, startHourlyBillingCheck } from './jobs/BillingCron';
 
 // Load environment variables
 dotenv.config();
@@ -47,6 +51,17 @@ const app: Application = express();
 
 // Connect to database
 connectDatabase();
+
+// 🔥 PHASE 3: Start billing automation
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  // Start daily billing check (runs at 2 AM)
+  startBillingCron();
+  
+  // Optional: Start hourly check for more frequent updates
+  // startHourlyBillingCheck();
+  
+  console.log('✅ Billing automation initialized');
+}
 
 // Security middleware
 app.use(helmet());
@@ -88,6 +103,9 @@ app.get('/health', (req, res) => {
     message: 'Server is running',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
+    billing: {
+      cronActive: process.env.NODE_ENV !== 'production' || !process.env.VERCEL,
+    },
   });
 });
 
@@ -95,7 +113,26 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/requests', requestRoutes);
+app.use('/api/support', supportRoutes);
 app.use('/api/admin', adminRoutes);
+
+// 🔥 Manual billing check endpoint (for testing/manual trigger)
+app.post('/api/admin/billing/check', async (req, res) => {
+  try {
+    const { updateBillingStatuses } = require('./jobs/billingCron');
+    await updateBillingStatuses();
+    res.status(200).json({
+      success: true,
+      message: 'Billing status check completed',
+    });
+  } catch (error) {
+    console.error('Manual billing check failed:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to run billing check',
+    });
+  }
+});
 
 // 404 handler
 app.use(notFound);
@@ -108,10 +145,15 @@ if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
   const PORT = process.env.PORT || 5000;
 
   app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV}`);
-    console.log(`API URL: http://localhost:${PORT}`);
-    console.log(`Admin endpoints: http://localhost:${PORT}/api/admin`);
+    console.log(`
+╔════════════════════════════════════════════════════════════╗
+║  🚀 Server is running on port ${PORT}                      
+║  🌍 Environment: ${process.env.NODE_ENV}                  
+║  📡 API URL: http://localhost:${PORT}                     
+║  🔧 Admin endpoints: http://localhost:${PORT}/api/admin   
+║  💳 Billing automation: ACTIVE                             
+╚════════════════════════════════════════════════════════════╝
+    `);
   });
 }
 

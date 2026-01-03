@@ -1,7 +1,13 @@
 import { Router } from 'express';
-import { updateUserProfile, getAllUsers, getUserById, getUserWebsites, getUserWebsiteById } from '../controllers/user.controller';
+import { 
+  updateUserProfile, 
+  getAllUsers, 
+  getUserById, 
+  getUserWebsites, 
+  getUserWebsiteById,
+  getUserWebsitesByPlan  // Add this import
+} from '../controllers/user.controller';
 import { requireAuth } from '../middleware/auth';
-import { get } from 'node:http';
 
 const router = Router();
 
@@ -11,6 +17,9 @@ router.use(requireAuth);
 // Update current user's profile
 router.patch('/profile', updateUserProfile);
 
+// Get user's websites filtered by plan
+router.get('/websites/plan', getUserWebsitesByPlan);
+
 // Get user's websites
 router.get('/websites', getUserWebsites);
 
@@ -19,6 +28,5 @@ router.get('/websites/:id', getUserWebsiteById);
 
 // Get user by ID
 router.get('/:id', getUserById);
-
 
 export default router;
